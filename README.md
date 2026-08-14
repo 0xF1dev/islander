@@ -51,6 +51,9 @@ islander --seed [seed]
 ```
 _Even with set seeds, images differ when using different resolutions._
 
+#### Other options
+There are some other options that let you customize the output, such as `--no-grass`, which removes the grass blades from the output and `--night`, that changes the color palette and adds some stars
+
 ## Example images
 
 **128x128, upscaled 4x to 512x512**
