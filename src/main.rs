@@ -1,11 +1,11 @@
 use ansi_term::Color::Green;
-use ansi_term::{Color::Red, Style};
+use ansi_term::{Color::Red, Color::Yellow, Style};
 use clap::Parser;
 use image::{Rgb, RgbImage};
 use rand::RngExt;
+use rand_seeder::Seeder;
 use spinners::{Spinner, Spinners};
 use std::cmp::max;
-use rand_seeder::Seeder;
 
 /// Procedural island generator
 #[derive(Parser, Debug)]
@@ -25,6 +25,10 @@ struct Args {
     /// Set a seed for the image
     #[arg(long)]
     seed: Option<String>,
+
+    /// Force a higher size
+    #[arg(long)]
+    force_size: bool,
 }
 
 const NEIGHBOR_OFFSETS: [(isize, isize); 8] = [
@@ -84,7 +88,13 @@ impl Image {
 fn main() {
     let args = Args::parse();
     let size = args.size.split('x').collect::<Vec<&str>>();
-    if size.len() != 2
+    if size.iter().all(|s| {
+        let v = s.parse::<usize>();
+        v.is_ok() && v.clone().unwrap() > 1024 && size.len() == 2
+    }) && args.force_size
+    {
+        println!("{}", Yellow.italic().paint("Warning! Forcing a higher size will slow down the process to eternity. If it isn't necessary, it's recommended to instead use upscaling."));
+    } else if size.len() != 2
         || size.iter().any(|s| {
             let v = s.parse::<usize>();
             v.is_err() || v.clone().unwrap() > 1024 || v.clone().unwrap() < 16
@@ -124,9 +134,7 @@ fn main() {
     let mut pixels = if seed.is_some() {
         println!(
             "Seed: {}",
-            Style::new()
-                .bold()
-                .paint(seed.clone().unwrap().to_string())
+            Style::new().bold().paint(seed.clone().unwrap().to_string())
         );
         Image::from_seed(width, height, seed.clone().unwrap())
     } else {
