@@ -29,6 +29,10 @@ struct Args {
     /// Force a higher size
     #[arg(long)]
     force_size: bool,
+
+    /// Disable grass blades
+    #[arg(long)]
+    no_grass: bool
 }
 
 const NEIGHBOR_OFFSETS: [(isize, isize); 8] = [
@@ -120,6 +124,7 @@ fn main() {
         args.output
     };
     println!("Output: {}", Style::new().bold().paint(output.clone()));
+    let no_grass = args.no_grass;
     let scale = args.upscale;
     if scale.is_some() {
         println!(
@@ -200,7 +205,7 @@ fn main() {
                 let surrounding_pixels = get_surrounding_pixels(&pixels, x, y);
                 let surrounding_pos = get_surrounding_pixels_positions(&pixels, x, y);
                 // random grass
-                if !surrounding_pixels.iter().any(|p| p < &208)
+                if !no_grass && !surrounding_pixels.iter().any(|p| p < &208)
                     && grass_pixels
                         .iter()
                         .filter(|p| surrounding_pos.contains(*p))
