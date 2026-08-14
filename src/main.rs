@@ -5,6 +5,7 @@ use image::{Rgb, RgbImage};
 use rand::RngExt;
 use spinners::{Spinner, Spinners};
 use std::cmp::max;
+use rand_seeder::Seeder;
 
 /// Procedural island generator
 #[derive(Parser, Debug)]
@@ -20,6 +21,10 @@ struct Args {
     /// Upscale image by a multiplier
     #[arg(long)]
     upscale: Option<u8>,
+
+    /// Set a seed for the image
+    #[arg(long)]
+    seed: Option<String>,
 }
 
 const NEIGHBOR_OFFSETS: [(isize, isize); 8] = [
@@ -43,6 +48,18 @@ struct Image {
 impl Image {
     fn new(width: u16, height: u16) -> Self {
         let rng = rand::rng();
+        Self {
+            width,
+            height,
+            data: rng
+                .random_iter()
+                .take(width as usize * height as usize)
+                .collect(),
+        }
+    }
+
+    fn from_seed(width: u16, height: u16, seed: String) -> Self {
+        let rng: rand::rngs::Xoshiro256PlusPlus = Seeder::from(seed).into_rng();
         Self {
             width,
             height,
@@ -103,9 +120,23 @@ fn main() {
         );
     }
 
-    let mut rng = rand::rng();
-
-    let mut pixels = Image::new(width, height);
+    let seed = args.seed;
+    let mut pixels = if seed.is_some() {
+        println!(
+            "Seed: {}",
+            Style::new()
+                .bold()
+                .paint(seed.clone().unwrap().to_string())
+        );
+        Image::from_seed(width, height, seed.clone().unwrap())
+    } else {
+        Image::new(width, height)
+    };
+    let mut rng: rand::rngs::Xoshiro256PlusPlus = if seed.is_some() {
+        Seeder::from(seed).into_rng()
+    } else {
+        rand::make_rng()
+    };
 
     let mut spinner = Spinner::with_timer(Spinners::Dots, "Generating noise...".into());
     // initial noise generation
@@ -167,7 +198,7 @@ fn main() {
                         .filter(|p| surrounding_pos.contains(*p))
                         .collect::<Vec<_>>()
                         .is_empty()
-                    && rng.random_range(0..=10) == 1
+                    && rng.random_bool(0.1)
                 {
                     img.put_pixel(x as u32, y as u32, Rgb([64, 172, 109]));
                     grass_pixels.push((x, y));
