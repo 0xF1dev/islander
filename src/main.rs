@@ -32,7 +32,11 @@ struct Args {
 
     /// Disable grass blades
     #[arg(long)]
-    no_grass: bool
+    no_grass: bool,
+
+    /// Night mode
+    #[arg(long)]
+    night: bool,
 }
 
 const NEIGHBOR_OFFSETS: [(isize, isize); 8] = [
@@ -125,6 +129,7 @@ fn main() {
     };
     println!("Output: {}", Style::new().bold().paint(output.clone()));
     let no_grass = args.no_grass;
+    let night = args.night;
     let scale = args.upscale;
     if scale.is_some() {
         println!(
@@ -192,6 +197,27 @@ fn main() {
         "Generating image (might take a while)...".into(),
     );
 
+    let colors = match night {
+        true => [
+            Rgb([25, 95, 48]),
+            Rgb([19, 107, 49]),
+            Rgb([130, 121, 17]),
+            Rgb([125, 116, 12]),
+            Rgb([38, 81, 133]),
+            Rgb([2, 52, 115]),
+            Rgb([12, 62, 125]),
+        ],
+        false => [
+            Rgb([64, 172, 109]),
+            Rgb([53, 196, 112]),
+            Rgb([242, 225, 49]),
+            Rgb([232, 215, 39]),
+            Rgb([91, 151, 247]),
+            Rgb([19, 93, 212]),
+            Rgb([39, 113, 232]),
+        ],
+    };
+
     let mut img = RgbImage::new(width as u32, height as u32);
 
     let mut light_blue_pixels: Vec<(u16, u16)> = Vec::new();
@@ -205,7 +231,8 @@ fn main() {
                 let surrounding_pixels = get_surrounding_pixels(&pixels, x, y);
                 let surrounding_pos = get_surrounding_pixels_positions(&pixels, x, y);
                 // random grass
-                if !no_grass && !surrounding_pixels.iter().any(|p| p < &208)
+                if !no_grass
+                    && !surrounding_pixels.iter().any(|p| p < &208)
                     && grass_pixels
                         .iter()
                         .filter(|p| surrounding_pos.contains(*p))
@@ -213,10 +240,10 @@ fn main() {
                         .is_empty()
                     && rng.random_bool(0.1)
                 {
-                    img.put_pixel(x as u32, y as u32, Rgb([64, 172, 109]));
+                    img.put_pixel(x as u32, y as u32, colors[0]);
                     grass_pixels.push((x, y));
                 } else if !grass_pixels.iter().any(|p| *p == (x, y)) {
-                    img.put_pixel(x as u32, y as u32, Rgb([53, 196, 112]));
+                    img.put_pixel(x as u32, y as u32, colors[1]);
                 }
             } else if pixel >= 78      // sand
                 && get_surrounding_pixels(&pixels, x, y)
@@ -230,10 +257,10 @@ fn main() {
                     let surrounding_pixels = get_surrounding_pixels(&pixels, x, y);
                     // sand in contact with grass
                     if surrounding_pixels.iter().any(|p| p >= &208) {
-                        img.put_pixel(x as u32, y as u32, Rgb([242, 225, 49]));
+                        img.put_pixel(x as u32, y as u32, colors[2]);
                         dark_sand_pixels.push((x, y));
                     } else {
-                        img.put_pixel(x as u32, y as u32, Rgb([232, 215, 39]));
+                        img.put_pixel(x as u32, y as u32, colors[3]);
                     }
                 }
             } else {
@@ -242,7 +269,7 @@ fn main() {
                 let surrounding_pos = get_surrounding_pixels_positions(&pixels, x, y);
                 if surrounding_pixels.iter().any(|p| p >= &78) {
                     // shore water
-                    img.put_pixel(x as u32, y as u32, Rgb([91, 151, 247]));
+                    img.put_pixel(x as u32, y as u32, colors[4]);
                     light_blue_pixels.push((x, y));
                 } else if surrounding_pos // medium-depth water
                     .iter()
@@ -250,11 +277,14 @@ fn main() {
                     .collect::<Vec<_>>()
                     .is_empty()
                 {
-                    img.put_pixel(x as u32, y as u32, Rgb([19, 93, 212]));
+                    img.put_pixel(x as u32, y as u32, colors[5]);
                 } else {
                     // deep water
-                    img.put_pixel(x as u32, y as u32, Rgb([39, 113, 232]));
+                    img.put_pixel(x as u32, y as u32, colors[6]);
                 }
+            }
+            if night && rng.random_bool(0.005) {
+                img.put_pixel(x as u32, y as u32, Rgb([255, 255, 255]))
             }
         }
     }
